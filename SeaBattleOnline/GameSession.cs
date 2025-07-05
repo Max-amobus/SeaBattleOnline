@@ -22,8 +22,6 @@ namespace ServerApp
             Player1 = player1;
             Player2 = player2;
 
-            //Player1.Opponent = Player2;
-            //Player2.Opponent = Player1;
             _playerShips[player1] = new HashSet<Point>();
             _playerShips[player2] = new HashSet<Point>();
 
@@ -34,27 +32,41 @@ namespace ServerApp
         {
             try
             {
-                var ships = shipsData.Split(';')
+                Console.WriteLine($"[SHIPS REGISTER] Початков? дан?: {shipsData}");
+
+                // Очищаємо попередн? значення
+                _playerShips[player] = new HashSet<Point>();
+
+                var shipCoords = shipsData.Split(';')
                     .Where(s => !string.IsNullOrWhiteSpace(s))
                     .Select(s => s.Split(','))
                     .Where(parts => parts.Length == 2)
                     .Select(parts => new Point(int.Parse(parts[0]), int.Parse(parts[1])))
                     .ToList();
 
-                _playerShips[player] = new HashSet<Point>(ships);
-                Console.WriteLine($"[SHIPS REGISTERED] {player.PlayerName} має {ships.Count} кораблів:");
-                foreach (var ship in ships.Take(5))
-                    Console.WriteLine($"- {ship.X},{ship.Y}");
+                foreach (var coord in shipCoords)
+                {
+                    _playerShips[player].Add(coord);
+                    Console.WriteLine($"[SHIP ADDED] Додано корабель: {coord.X},{coord.Y}");
+                }
+
+                Console.WriteLine($"[SHIPS REGISTERED] Для {player.PlayerName} зареєстровано {_playerShips[player].Count} корабл?в");
+
+                // Виводимо вс? корабл? для перев?рки
+                Console.WriteLine("[SHIPS LIST] Список корабл?в:");
+                foreach (var ship in _playerShips[player])
+                {
+                    Console.WriteLine($"- {ship.X},{ship.Y} (Hash: {ship.GetHashCode()})");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERROR] Помилка реєстрації кораблів: {ex.Message}");
+                Console.WriteLine($"[REGISTER ERROR] Помилка: {ex.Message}");
             }
         }
 
         private void StartGame()
         {
-            // Очищаємо попередні попадання
             Player1.HitShots.Clear();
             Player2.HitShots.Clear();
 
@@ -90,9 +102,8 @@ namespace ServerApp
         {
             currentTurn = (currentTurn == Player1) ? Player2 : Player1;
 
-            // Відправляємо ЧІТКІ повідомлення:
-            currentTurn.SendMessage($"{MessageTypes.TURN}|YOUR");      // Активний гравець
-            GetOpponent(currentTurn).SendMessage($"{MessageTypes.TURN}|OPPONENT"); // Чекаючий
+            currentTurn.SendMessage($"{MessageTypes.TURN}|YOUR");     
+            GetOpponent(currentTurn).SendMessage($"{MessageTypes.TURN}|OPPONENT");
 
             Console.WriteLine($"[TURN] Хід переключено на {currentTurn.PlayerName}");
         }
@@ -101,6 +112,13 @@ namespace ServerApp
         {
             ClientHandler attackingPlayer = currentTurn;
             ClientHandler targetPlayer = GetOpponent(attackingPlayer);
+
+            // Перев?рка ?н?ц?ал?зац??
+            if (!_playerShips.ContainsKey(targetPlayer) || _playerShips[targetPlayer] == null)
+            {
+                Console.WriteLine($"[ERROR] Немає даних про корабл? {targetPlayer.PlayerName}");
+                return;
+            }
 
             var parts = message.Split(':');
             if (parts.Length != 2) return;
@@ -112,24 +130,33 @@ namespace ServerApp
             var result = parts[1];
             var hitPoint = new Point(x, y);
 
+            Console.WriteLine($"[SHOT] {attackingPlayer.PlayerName} -> {targetPlayer.PlayerName} ({x},{y})");
+
             if (result == "HIT")
             {
-                // Додаємо логування
-                Console.WriteLine($"[SHIP HIT] {attackingPlayer.PlayerName} влучив у {targetPlayer.PlayerName} на ({x},{y})");
-
-                if (_playerShips[targetPlayer].Remove(hitPoint))
+                // Альтернативний спос?б перев?рки
+                var shipFound = _playerShips[targetPlayer].FirstOrDefault(p => p.X == x && p.Y == y);
+                if (shipFound != default)
                 {
-                    Console.WriteLine($"[SHIP REMOVED] Координата ({x},{y}) видалена");
-                    Console.WriteLine($"[SHIPS LEFT] У {targetPlayer.PlayerName} залишилось: {_playerShips[targetPlayer].Count} кораблів");
+                    _playerShips[targetPlayer].Remove(shipFound);
+                    Console.WriteLine($"[HIT SUCCESS] Видалено корабель на ({x},{y})");
 
-                    // Перевіряємо перемогу через окремий метод
-                    if (CheckWinCondition(attackingPlayer))
+                    if (_playerShips[targetPlayer].Count == 0)
                     {
-                        Console.WriteLine($"[GAME OVER] {attackingPlayer.PlayerName} переміг!");
+                        Console.WriteLine($"[GAME OVER] Вс? корабл? знищен?!");
                         attackingPlayer.SendMessage($"{MessageTypes.GAME_OVER}|WIN");
                         targetPlayer.SendMessage($"{MessageTypes.GAME_OVER}|LOSE");
                         EndSession();
                         return;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[HIT FAILED] Координати ({x},{y}) не знайдено серед корабл?в");
+                    Console.WriteLine("[CURRENT SHIPS] Список корабл?в ц?л?:");
+                    foreach (var ship in _playerShips[targetPlayer])
+                    {
+                        Console.WriteLine($"- {ship.X},{ship.Y}");
                     }
                 }
 
@@ -189,4 +216,15 @@ namespace ServerApp
             Console.WriteLine("[GAME] Сесію гри завершено");
         }
     }
+}
+
+public struct GamePoint
+{
+    public int X { get; }
+    public int Y { get; }
+
+    public GamePoint(int x, int y) { X = x; Y = y; }
+
+    public override bool Equals(object obj) => obj is GamePoint p && p.X == X && p.Y == Y;
+    public override int GetHashCode() => HashCode.Combine(X, Y);
 }
