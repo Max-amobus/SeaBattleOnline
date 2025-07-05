@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Drawing;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
-
+using ServerApp.Models;
 
 namespace ServerApp
 {
@@ -15,19 +14,29 @@ namespace ServerApp
         private NetworkStream _stream;
         private StreamReader _reader;
         private StreamWriter _writer;
-        public Models.PlayerInfo Info { get; private set; }
+        public CellState[,] GameBoard = new CellState[10, 10]; 
+        public HashSet<Point> HitShots = new();
 
         public string PlayerName { get; private set; } = "Unknown";
+        public PlayerInfo Info { get; private set; }
         public ClientHandler Opponent { get; set; }
+        public GameSession Session { get; set; }
+        public bool IsReady { get; private set; }
         public bool InGame => Opponent != null;
 
         public ClientHandler(TcpClient client, Server server)
         {
             _client = client;
             _server = server;
-
             string ip = ((System.Net.IPEndPoint)_client.Client.RemoteEndPoint).Address.ToString();
-            Info = new Models.PlayerInfo("Unknown", ip);
+            Info = new PlayerInfo("Unknown", ip);
+        }
+        public enum CellState
+        {
+            Empty,      // Порожня
+            Ship,       // Корабель
+            Hit,        // Вражена
+            Miss        // Промах
         }
 
         public void Handle()
@@ -38,55 +47,51 @@ namespace ServerApp
                 _reader = new StreamReader(_stream, Encoding.UTF8);
                 _writer = new StreamWriter(_stream, Encoding.UTF8) { AutoFlush = true };
 
-                // Отримати ім’я гравця
-                PlayerName = _reader.ReadLine();
-                Info.Name = PlayerName;
-                Console.WriteLine($"[SERVER] Гравець підключився: {PlayerName}");
-
-                // Шукати суперника
-                Opponent = _server.FindOpponent(this);
-
-                if (Opponent != null)
+                string firstLine = _reader.ReadLine();
+                if (firstLine?.StartsWith("CONNECT|") == true)
                 {
-                    // Пов'язуємо гравців
-                    Opponent.Opponent = this;
-
-                    Console.WriteLine($"[GAME] Старт гри між {PlayerName} та {Opponent.PlayerName}");
-
-                    Opponent.SendMessage($"START|{PlayerName}");
-                    SendMessage($"START|{Opponent.PlayerName}");
-
-                    // Гравець ініціатор починає першим
-                    Opponent.SendMessage("TURN|WAIT");
-                    SendMessage("TURN|YOUR");
-                }
-                else
-                {
-                    SendMessage("WAITING|Очікуємо іншого гравця...");
+                    PlayerName = firstLine.Substring(8);
+                    Info.Name = PlayerName;
+                    Console.WriteLine($"[SERVER] Гравець підключився: {PlayerName}");
                 }
 
-                // Основний цикл обробки
                 while (_client.Connected)
                 {
-                    string? message = _reader.ReadLine();
-                    if (message == null) break;
+                    string message = _reader.ReadLine();
+                    if (string.IsNullOrWhiteSpace(message)) continue;
 
-                    Console.WriteLine($"[MSG] {PlayerName}: {message}");
+                    Console.WriteLine($"[ПОВІДОМЛЕННЯ ВІД {PlayerName}] {message}");
 
-                    // Передаємо повідомлення супернику
-                    if (InGame && Opponent != null)
+                    if (message == "READY")
                     {
-                        Opponent.SendMessage(message);
+                        IsReady = true;
+                        _server.PairPlayers(this);
                     }
-
-                    // Обробка запиту на нову гру
-                    if (message.StartsWith("RESTART"))
+                    else if (message.StartsWith("CHAT|"))
                     {
-                        Opponent?.SendMessage("RESTART");
+                        _server.Broadcast($"{MessageTypes.CHAT}|{message.Substring(5)}", this);
                     }
-
-                    // Чат повідомлення або хід, тощо
-                    // Тут можна додати додаткову обробку
+                    else if (message.StartsWith("SHOT|"))
+                    {
+                        Session?.HandleMove(this, message);
+                    }
+                    else if (message.StartsWith("RESULT|"))
+                    {
+                        var data = message.Substring(7);
+                        Session?.HandleShotResult(this, data);
+                    }
+                    else if (message.StartsWith("RESTART"))
+                    {
+                        Session?.HandleRestartRequest(this);
+                    }
+                    else if (message.StartsWith("SHIPS|"))
+                    {
+                        Session?.RegisterShips(this, message.Substring(6));
+                    }
+                    else if (message == "DISCONNECT")
+                    {
+                        break;
+                    }
                 }
             }
             catch (Exception ex)
@@ -96,8 +101,8 @@ namespace ServerApp
             finally
             {
                 Console.WriteLine($"[SERVER] {PlayerName} відключився");
+                Session?.EndSession();
                 _server.RemoveClient(this);
-                Opponent?.SendMessage("DISCONNECTED");
                 Opponent = null;
                 _client.Close();
             }
@@ -111,7 +116,7 @@ namespace ServerApp
             }
             catch
             {
-                // Ігнорувати, якщо вже закрито
+                // Ігнор помилок надсилання
             }
         }
     }

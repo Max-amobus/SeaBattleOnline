@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ClientApp.Models
-{
+﻿namespace ClientApp.Models;
     public class ShotResult
     {
         public int X { get; set; }
         public int Y { get; set; }
         public bool IsHit { get; set; }
+        public bool IsPlayerShot { get; set; }
+
+        public ShotResult() { }
 
         public ShotResult(int x, int y, bool isHit)
         {
@@ -26,7 +22,6 @@ namespace ClientApp.Models
 
         public static ShotResult Parse(string s)
         {
-            // Формат: "x,y:HIT" або "x,y:MISS"
             var parts = s.Split(':');
             if (parts.Length != 2) throw new FormatException("Invalid ShotResult format");
 
@@ -40,4 +35,3 @@ namespace ClientApp.Models
             return new ShotResult(x, y, isHit);
         }
     }
-}

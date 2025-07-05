@@ -3,17 +3,18 @@
     public enum MessageType
     {
         Connect,
+        Ready,
         Start,
         Turn,
         Shot,
         Result,
         Chat,
-        RestartRequest,
-        RestartConfirm,
+        Restart,         
         GameOver,
         Disconnected,
         Error,
         Waiting,
+        System,          
         Unknown
     }
 
@@ -36,4 +37,5 @@
         InProgress,
         Ended
     }
+
 }

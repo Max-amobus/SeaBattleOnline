@@ -29,7 +29,7 @@ namespace Shared
             var parts = rawMessage.Split('|', 2);
             if (parts.Length != 2) return new Message(MessageType.Unknown, rawMessage);
 
-            if (!Enum.TryParse(parts[0], out MessageType type))
+            if (!Enum.TryParse(parts[0], true, out MessageType type))
                 type = MessageType.Unknown;
 
             return new Message(type, parts[1]);

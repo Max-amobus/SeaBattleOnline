@@ -1,108 +1,118 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace ClientApp.Forms
 {
     public partial class GameBoard : UserControl
     {
-        private Button[,] cells = new Button[10, 10];
+        private const int GridSize = 10;
+        private Button[,] cells = new Button[GridSize, GridSize];
 
-        public event Action<int, int>? OnCellClick;
+        public event Action<int, int>? CellClicked;
 
         public GameBoard()
         {
             InitializeComponent();
-            InitializeGrid();
+            SetupGrid();
+            this.Resize += GameBoard_Resize;
         }
 
-        private void InitializeGrid()
+        private void GameBoard_Resize(object? sender, EventArgs e)
         {
-            // Додаємо стилі рядків і колонок
-            tableLayoutPanel.ColumnStyles.Clear();
-            tableLayoutPanel.RowStyles.Clear();
-            for (int i = 0; i < 10; i++)
+            ResizeGrid();
+        }
+
+        private void SetupGrid()
+        {
+            this.Controls.Clear();
+
+            for (int y = 0; y < GridSize; y++)
             {
-                tableLayoutPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 10F));
-                tableLayoutPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 10F));
+                for (int x = 0; x < GridSize; x++)
+                {
+                    var btn = new Button();
+                    btn.Tag = (x, y);
+                    btn.BackColor = Color.LightBlue;
+                    btn.Margin = Padding.Empty;
+                    btn.Padding = Padding.Empty;
+                    btn.FlatStyle = FlatStyle.Flat;
+                    btn.FlatAppearance.BorderColor = Color.Black;
+                    btn.FlatAppearance.BorderSize = 1;
+                    btn.Click += Cell_Click;
+
+                    this.Controls.Add(btn);
+                    cells[x, y] = btn;
+                }
             }
 
-            tableLayoutPanel.Controls.Clear();
+            ResizeGrid();
+        }
 
-            for (int y = 0; y < 10; y++)
+        private void ResizeGrid()
+        {
+            if (cells == null) return;
+            int cellSize = Math.Min(this.Width / GridSize, this.Height / GridSize);
+
+            for (int y = 0; y < GridSize; y++)
             {
-                for (int x = 0; x < 10; x++)
+                for (int x = 0; x < GridSize; x++)
                 {
-                    Button btn = new Button
-                    {
-                        Dock = DockStyle.Fill,
-                        Margin = new Padding(1),
-                        BackColor = Color.LightBlue,
-                        Tag = new Point(x, y),
-                        Font = new Font("Segoe UI", 10F, FontStyle.Bold)
-                    };
-                    btn.Click += Btn_Click;
-                    cells[x, y] = btn;
-                    tableLayoutPanel.Controls.Add(btn, x, y);
+                    var btn = cells[x, y];
+                    btn.Size = new Size(cellSize, cellSize);
+                    btn.Location = new Point(x * cellSize, y * cellSize);
                 }
             }
         }
 
-        private void Btn_Click(object? sender, EventArgs e)
+        private void Cell_Click(object? sender, EventArgs e)
         {
-            if (sender is Button btn && btn.Tag is Point p)
+            if (sender is Button btn && btn.Tag is ValueTuple<int, int> coords)
             {
-                OnCellClick?.Invoke(p.X, p.Y);
+                int x = coords.Item1;
+                int y = coords.Item2;
+                CellClicked?.Invoke(x, y);
             }
         }
 
-        /// <summary>
-        /// Відзначити клітинку як промах
-        /// </summary>
-        public void MarkMiss(int x, int y)
-        {
-            SetCellState(x, y, Color.Gray, "•");
-        }
-
-        /// <summary>
-        /// Відзначити клітинку як потрапляння
-        /// </summary>
         public void MarkHit(int x, int y)
         {
-            SetCellState(x, y, Color.Red, "X");
+            if (IsValidCoord(x, y))
+            {
+                cells[x, y].BackColor = Color.Red;
+                cells[x, y].Enabled = false;
+            }
         }
 
-        /// <summary>
-        /// Очищення поля (наприклад, для нової гри)
-        /// </summary>
-        public void ResetBoard()
+        public void MarkMiss(int x, int y)
         {
-            for (int y = 0; y < 10; y++)
-                for (int x = 0; x < 10; x++)
-                    SetCellState(x, y, Color.LightBlue, "");
+            if (IsValidCoord(x, y))
+            {
+                cells[x, y].BackColor = Color.White;
+                cells[x, y].Enabled = false;
+            }
         }
 
-        private void SetCellState(int x, int y, Color backColor, string text)
+        private bool IsValidCoord(int x, int y)
         {
-            var btn = cells[x, y];
-            btn.BackColor = backColor;
-            btn.Text = text;
-            btn.Enabled = false; // щоб після пострілу клітинка не була натискабельна
+            return x >= 0 && x < GridSize && y >= 0 && y < GridSize;
         }
 
-        /// <summary>
-        /// Вмикає або вимикає усі клітинки (наприклад, щоб блокувати поле)
-        /// </summary>
-        public void SetEnabled(bool enabled)
+        public void HandleIncomingShot(int x, int y, bool isHit)
+        {
+            if (isHit)
+                MarkHit(x, y);
+            else
+                MarkMiss(x, y);
+        }
+
+        public void ClearBoard()
         {
             foreach (var btn in cells)
-                btn.Enabled = enabled && string.IsNullOrEmpty(btn.Text);
+            {
+                btn.BackColor = Color.LightBlue;
+                btn.Enabled = true;
+            }
         }
     }
 }

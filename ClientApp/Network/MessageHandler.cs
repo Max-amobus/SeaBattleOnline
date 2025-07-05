@@ -47,7 +47,6 @@ namespace ClientApp.Network
                     break;
 
                 case "RESULT":
-                    // param: "x,y:HIT" або "x,y:MISS"
                     var resParts = param.Split(':');
                     if (resParts.Length == 2)
                     {
@@ -66,7 +65,5 @@ namespace ClientApp.Network
                     break;
             }
         }
-
-
     }
 }

@@ -1,115 +1,55 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace ClientApp.Network
 {
     public class Client
     {
-        private TcpClient _tcpClient;
+        private TcpClient _client;
         private NetworkStream _stream;
-        private CancellationTokenSource _cts;
 
-        public event Action<string>? OnMessageReceived;
-        public event Action? OnDisconnected;
+        public event Action<byte[]>? MessageReceived;
 
-        public bool IsConnected => _tcpClient?.Connected ?? false;
+        private readonly string _host;
+        private readonly int _port;
 
-        public Client()
+        public Client(string host, int port)
         {
-            _tcpClient = new TcpClient();
-            _cts = new CancellationTokenSource();
+            _host = host;
+            _port = port;
         }
 
-        public async Task<bool> ConnectAsync(string ip, int port)
+        public void Connect()
         {
-            try
-            {
-                await _tcpClient.ConnectAsync(ip, port);
-                _stream = _tcpClient.GetStream();
-                StartListening(_cts.Token);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            _client = new TcpClient(_host, _port);
+            _stream = _client.GetStream();
+            Task.Run(ReceiveLoop);
         }
 
-        public async Task SendAsync(string message)
+        private async Task ReceiveLoop()
         {
-            if (_stream == null || !_tcpClient.Connected) return;
-
-            byte[] buffer = Encoding.UTF8.GetBytes(message + "\n");
-            try
+            byte[] buffer = new byte[4096];
+            while (true)
             {
-                await _stream.WriteAsync(buffer, 0, buffer.Length);
-                await _stream.FlushAsync();
-            }
-            catch
-            {
-                Disconnect();
+                int byteCount = await _stream.ReadAsync(buffer, 0, buffer.Length);
+                if (byteCount == 0) break;
+                byte[] data = new byte[byteCount];
+                Array.Copy(buffer, data, byteCount);
+                MessageReceived?.Invoke(data);
             }
         }
 
-        private async void StartListening(CancellationToken token)
+        public async Task SendAsync(byte[] data)
         {
-            byte[] buffer = new byte[1024];
-            StringBuilder sb = new();
-
-            try
-            {
-                while (!token.IsCancellationRequested)
-                {
-                    int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length, token);
-                    if (bytesRead == 0)
-                    {
-                        // Сервер закрив з’єднання
-                        Disconnect();
-                        break;
-                    }
-
-                    sb.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
-
-                    // Обробка повних повідомлень, розділених '\n'
-                    string content = sb.ToString();
-                    int newlineIndex;
-                    while ((newlineIndex = content.IndexOf('\n')) >= 0)
-                    {
-                        string message = content[..newlineIndex].Trim();
-                        content = content[(newlineIndex + 1)..];
-                        if (!string.IsNullOrEmpty(message))
-                            OnMessageReceived?.Invoke(message);
-                    }
-                    sb.Clear();
-                    sb.Append(content);
-                }
-            }
-            catch
-            {
-                Disconnect();
-            }
+            if (_stream != null)
+                await _stream.WriteAsync(data, 0, data.Length);
         }
 
         public void Disconnect()
         {
-            if (_tcpClient != null)
-            {
-                _cts.Cancel();
-
-                try
-                {
-                    _stream?.Close();
-                    _tcpClient?.Close();
-                }
-                catch { }
-
-                OnDisconnected?.Invoke();
-            }
+            _stream?.Close();
+            _client?.Close();
         }
-
     }
 }

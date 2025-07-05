@@ -9,6 +9,7 @@ namespace ServerApp
     public class MessageTypes
     {
         public const string CONNECT = "CONNECT";             // Підключення клієнта (з іменем)
+        public const string READY = "READY";
         public const string START = "START";                 // Старт гри
         public const string TURN = "TURN";                   // Хід гравця ("YOUR", "WAIT")
         public const string SHOT = "SHOT";                   // Постріл (наприклад, SHOT|3,4)
@@ -18,6 +19,10 @@ namespace ServerApp
         public const string GAME_OVER = "GAMEOVER";          // Завершення гри (переможець)
         public const string DISCONNECTED = "DISCONNECTED";   // Відключення гравця
         public const string ERROR = "ERROR";                 // Повідомлення про помилку
-        public const string WAITING = "WAITING";             // Очікування іншого гравця
+        public const string WAITING = "WAITING";
+        public const string SYSYTEM = "SYSTEM";               // Для системних повідомлень// Очікування іншого гравця
+        public const string YOUR_TURN = "YOUR_TURN";
+        public const string OPPONENT_TURN = "OPPONENT_TURN";
+        public const string MISS = "MISS";
     }
 }

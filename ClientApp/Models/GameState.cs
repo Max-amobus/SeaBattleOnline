@@ -10,6 +10,8 @@ namespace ClientApp.Models
     {
         public PlayerInfo Player1 { get; set; }
         public PlayerInfo Player2 { get; set; }
+        private readonly Board _player1Board;
+        private readonly Board _player2Board;
 
         // true — ходить Player1, false — Player2
         public bool IsPlayer1Turn { get; private set; } = true;
@@ -22,6 +24,18 @@ namespace ClientApp.Models
 
         public PlayerInfo CurrentPlayer => IsPlayer1Turn ? Player1 : Player2;
         public PlayerInfo OpponentPlayer => IsPlayer1Turn ? Player2 : Player1;
+
+        //public bool TryMakeShot(int x, int y, out ShotResult result)
+        //{
+        //    result = null;
+        //    if (!_currentBoard.IsValidCoordinate(x, y))
+        //        return false;
+
+        //    var opponentBoard = _currentPlayer == Player1 ? _player2Board : _player1Board;
+        //    result = opponentBoard.RegisterShot(x, y);
+        //    return true;
+        //}
+
 
         public bool MakeShot(int x, int y)
         {

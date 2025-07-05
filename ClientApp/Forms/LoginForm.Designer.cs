@@ -29,13 +29,13 @@
         private void InitializeComponent()
         {
             groupBox1 = new GroupBox();
-            label1 = new Label();
-            txtName = new TextBox();
-            btnConnect = new Button();
-            label2 = new Label();
-            txtIP = new TextBox();
-            label3 = new Label();
             txtPort = new TextBox();
+            label3 = new Label();
+            txtIP = new TextBox();
+            label2 = new Label();
+            btnConnect = new Button();
+            txtName = new TextBox();
+            label1 = new Label();
             groupBox1.SuspendLayout();
             SuspendLayout();
             // 
@@ -56,21 +56,39 @@
             groupBox1.TabStop = false;
             groupBox1.Text = "Login";
             // 
-            // label1
+            // txtPort
             // 
-            label1.AutoSize = true;
-            label1.Location = new Point(23, 44);
-            label1.Name = "label1";
-            label1.Size = new Size(124, 30);
-            label1.TabIndex = 0;
-            label1.Text = "Ім'я гравця";
+            txtPort.Location = new Point(153, 210);
+            txtPort.Name = "txtPort";
+            txtPort.Size = new Size(350, 36);
+            txtPort.TabIndex = 6;
+            txtPort.Text = "8888";
             // 
-            // txtName
+            // label3
             // 
-            txtName.Location = new Point(153, 44);
-            txtName.Name = "txtName";
-            txtName.Size = new Size(350, 36);
-            txtName.TabIndex = 1;
+            label3.AutoSize = true;
+            label3.Location = new Point(80, 210);
+            label3.Name = "label3";
+            label3.Size = new Size(64, 30);
+            label3.TabIndex = 5;
+            label3.Text = "Порт";
+            // 
+            // txtIP
+            // 
+            txtIP.Location = new Point(153, 127);
+            txtIP.Name = "txtIP";
+            txtIP.Size = new Size(350, 36);
+            txtIP.TabIndex = 4;
+            txtIP.Text = "localhost";
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(23, 127);
+            label2.Name = "label2";
+            label2.Size = new Size(121, 30);
+            label2.TabIndex = 3;
+            label2.Text = "Ip сервера";
             // 
             // btnConnect
             // 
@@ -82,37 +100,21 @@
             btnConnect.UseVisualStyleBackColor = true;
             btnConnect.Click += btnConnect_Click;
             // 
-            // label2
+            // txtName
             // 
-            label2.AutoSize = true;
-            label2.Location = new Point(23, 127);
-            label2.Name = "label2";
-            label2.Size = new Size(121, 30);
-            label2.TabIndex = 3;
-            label2.Text = "Ip сервера";
+            txtName.Location = new Point(153, 44);
+            txtName.Name = "txtName";
+            txtName.Size = new Size(350, 36);
+            txtName.TabIndex = 1;
             // 
-            // txtIP
+            // label1
             // 
-            txtIP.Location = new Point(153, 127);
-            txtIP.Name = "txtIP";
-            txtIP.Size = new Size(350, 36);
-            txtIP.TabIndex = 4;
-            // 
-            // label3
-            // 
-            label3.AutoSize = true;
-            label3.Location = new Point(80, 210);
-            label3.Name = "label3";
-            label3.Size = new Size(64, 30);
-            label3.TabIndex = 5;
-            label3.Text = "Порт";
-            // 
-            // txtPort
-            // 
-            txtPort.Location = new Point(153, 210);
-            txtPort.Name = "txtPort";
-            txtPort.Size = new Size(350, 36);
-            txtPort.TabIndex = 6;
+            label1.AutoSize = true;
+            label1.Location = new Point(23, 44);
+            label1.Name = "label1";
+            label1.Size = new Size(124, 30);
+            label1.TabIndex = 0;
+            label1.Text = "Ім'я гравця";
             // 
             // LoginForm
             // 
